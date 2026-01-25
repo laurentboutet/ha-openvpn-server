@@ -1,6 +1,6 @@
 name: "OpenVPN Server"
 description: "Full-featured OpenVPN server with PKI management for secure remote access"
-version: "1.0.2"
+version: "1.0.3"
 slug: openvpn_server
 url: "https://github.com/laurentboutet/ha-openvpn-server"
 arch:
@@ -10,6 +10,10 @@ arch:
 init: false
 startup: services
 boot: auto
+privileged:
+  - NET_ADMIN
+  - SYS_MODULE
+host_network: false
 map:
   - share:rw
   - ssl:rw
@@ -48,4 +52,3 @@ schema:
   log_level: "int(0,9)?"
   cipher: "list(AES-256-GCM|AES-128-GCM|AES-256-CBC)?"
   auth: "list(SHA256|SHA384|SHA512)?"
-
