@@ -88,10 +88,16 @@ for dns in $(bashio::config 'dns_servers'); do
     echo "push \"dhcp-option DNS ${dns}\"" >> "${server_conf}"
 done
 
-# Add routes
-for route in $(bashio::config 'routes'); do
-    echo "push \"route ${route}\"" >> "${server_conf}"
-done
+# Add routes - iterate through array properly  
+declare route_count
+route_count=$(bashio::config 'routes | length')
+
+if [[ "${route_count}" -gt 0 ]]; then
+    for (( i=0; i < route_count; i++ )); do
+        route=$(bashio::config "routes[${i}]")
+        echo "push \"route ${route}\"" >> "${server_conf}"
+    done
+fi
 
 # Client options
 if bashio::config.true 'client_to_client'; then

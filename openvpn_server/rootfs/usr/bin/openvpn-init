@@ -24,9 +24,9 @@ EASYRSA_REQ_CN="HomeAssistant-OpenVPN-CA" \
 ./easyrsa build-ca nopass || exit 1
 
 bashio::log.info "Generating server certificate..."
+# build-server-full doesn't support EASYRSA_REQ_CN - let it auto-generate
 EASYRSA_PKI="${pki_dir}" \
 EASYRSA_BATCH=1 \
-EASYRSA_REQ_CN="server" \
 ./easyrsa build-server-full server nopass || exit 1
 
 bashio::log.info "Generating DH parameters (1-2 minutes)..."

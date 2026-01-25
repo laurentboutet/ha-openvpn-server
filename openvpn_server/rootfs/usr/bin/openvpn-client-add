@@ -29,7 +29,6 @@ bashio::log.info "Generating certificate for: ${client_name}"
 
 EASYRSA_PKI="${pki_dir}" \
 EASYRSA_BATCH=1 \
-EASYRSA_REQ_CN="${client_name}" \
 ./easyrsa build-client-full "${client_name}" nopass || exit 1
 
 PROTO=$(bashio::config 'proto')
