@@ -1,4 +1,4 @@
-ha-openvpn-server/
+openvpn-server/
 ├── config.yaml
 ├── Dockerfile
 ├── build.yaml
