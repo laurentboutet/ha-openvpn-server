@@ -34,7 +34,7 @@ This add-on transforms your Home Assistant into a full-featured OpenVPN server, 
 1. Open Home Assistant
 2. Navigate to **Supervisor** → **Add-on Store**
 3. Click **⋮** (three dots menu) → **Repositories**
-4. Add URL: `https://github.com/YOURUSERNAME/ha-openvpn-server`
+4. Add URL: `https://github.com/laurentboutet/ha-openvpn-server`
 5. Click **Add**
 
 ### Step 2: Install Add-on
@@ -618,7 +618,7 @@ A: Yes, same `.ovpn` works from anywhere with internet access.
 
 ## Support & Contributing
 
-- **Issues:** [GitHub Issues](https://github.com/YOURUSERNAME/ha-openvpn-server/issues)
+- **Issues:** [GitHub Issues](https://github.com/laurentboutet/ha-openvpn-server/issues)
 - **Discussions:** [Home Assistant Community](https://community.home-assistant.io/)
 - **Documentation:** This file
 - **Updates:** Star the repo for notifications

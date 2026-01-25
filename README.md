@@ -22,7 +22,7 @@ This add-on provides a production-ready OpenVPN server with:
 
 1. **Add Repository to Home Assistant:**
    - Navigate to **Supervisor** → **Add-on Store** → **⋮** (menu) → **Repositories**
-   - Add: `https://github.com/YOURUSERNAME/ha-openvpn-server`
+   - Add: `https://github.com/laurentboutet/ha-openvpn-server`
    - Click **Add**
 
 2. **Install Add-on:**
