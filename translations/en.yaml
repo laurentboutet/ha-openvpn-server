@@ -1,0 +1,37 @@
+configuration:
+  proto:
+    name: Protocol
+    description: Connection protocol (UDP recommended for performance)
+  port:
+    name: Port
+    description: OpenVPN server listening port
+  server_subnet:
+    name: VPN Subnet
+    description: IP subnet for VPN clients (e.g., 10.8.0.0)
+  server_netmask:
+    name: VPN Netmask
+    description: Netmask for VPN subnet (e.g., 255.255.255.0)
+  dns_servers:
+    name: DNS Servers
+    description: DNS servers pushed to clients
+  routes:
+    name: Routes
+    description: Network routes pushed to clients (e.g., 192.168.1.0 255.255.255.0)
+  client_to_client:
+    name: Client-to-Client
+    description: Allow VPN clients to communicate with each other
+  duplicate_cn:
+    name: Duplicate CN
+    description: Allow multiple connections with same certificate (not recommended)
+  max_clients:
+    name: Maximum Clients
+    description: Maximum number of simultaneous connections
+  log_level:
+    name: Log Level
+    description: OpenVPN verbosity level (0-9)
+  cipher:
+    name: Cipher
+    description: Encryption cipher algorithm
+  auth:
+    name: Authentication
+    description: HMAC authentication algorithm
