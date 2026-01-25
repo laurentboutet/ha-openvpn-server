@@ -1,0 +1,10 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck shell=bash
+# Run monitoring every 30 seconds
+
+while true; do
+    sleep 30
+    if bashio::config.true 'enable_sensors'; then
+        /usr/bin/openvpn-monitor
+    fi
+done

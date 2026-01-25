@@ -1,6 +1,6 @@
 name: "OpenVPN Server"
 description: "Full-featured OpenVPN server with PKI management for secure remote access"
-version: "1.0.9"
+version: "1.1.0"
 slug: openvpn_server
 url: "https://github.com/laurentboutet/ha-openvpn-server"
 arch:
@@ -19,14 +19,25 @@ full_access: true
 host_network: false
 hassio_api: true
 hassio_role: default
+auth_api: true
+homeassistant_api: true
+# Enable terminal
 stdin: true
+tty: true
+# Enable panel/ingress for future web UI
+panel_icon: mdi:vpn
+panel_title: OpenVPN Server
+# Watchdog
+watchdog: http://localhost:8099/health
 map:
   - share:rw
   - ssl:rw
 ports:
   1194/udp: 1194
+  8099/tcp: null
 ports_description:
   1194/udp: "OpenVPN server port"
+  8099/tcp: "Health check endpoint (internal)"
 options:
   proto: "udp"
   port: 1194
@@ -43,6 +54,10 @@ options:
   log_level: 3
   cipher: "AES-256-GCM"
   auth: "SHA256"
+  # New options for HA integration
+  enable_sensors: true
+  notification_on_connect: false
+  notification_on_disconnect: false
 schema:
   proto: "list(udp|tcp)?"
   port: "port?"
@@ -58,3 +73,6 @@ schema:
   log_level: "int(0,9)?"
   cipher: "list(AES-256-GCM|AES-128-GCM|AES-256-CBC)?"
   auth: "list(SHA256|SHA384|SHA512)?"
+  enable_sensors: "bool?"
+  notification_on_connect: "bool?"
+  notification_on_disconnect: "bool?"
