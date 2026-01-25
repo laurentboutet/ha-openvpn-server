@@ -1,14 +1,24 @@
 #!/usr/bin/with-contenv bashio
 # shellcheck shell=bash
 # ==============================================================================
-# Home Assistant Add-on: OpenVPN Server
-# Runs the OpenVPN server
+# Secure PKI in /data, user files in /share
 # ==============================================================================
-declare config_dir="/data/openvpn"
-declare pki_dir="${config_dir}/pki"
-declare server_conf="${config_dir}/server.conf"
+
+# Private data in /data
+declare data_dir="/data/openvpn"
+declare pki_dir="${data_dir}/pki"
+declare server_conf="${data_dir}/server.conf"
+
+# User-accessible in /share
+declare share_dir="/share/openvpn"
+declare clients_dir="${share_dir}/clients"
 
 bashio::log.info "Starting OpenVPN Server..."
+
+# Create directory structure
+mkdir -p "${data_dir}"
+mkdir -p "${pki_dir}"
+mkdir -p "${clients_dir}"
 
 # Check if PKI is initialized
 if [[ ! -f "${pki_dir}/ca.crt" ]]; then
@@ -38,7 +48,7 @@ proto ${PROTO}
 dev tun0
 topology subnet
 
-# Certificates and keys
+# Certificates and keys (secure in /data)
 ca ${pki_dir}/ca.crt
 cert ${pki_dir}/issued/server.crt
 key ${pki_dir}/private/server.key
@@ -47,7 +57,7 @@ tls-auth ${pki_dir}/ta.key 0
 
 # Network configuration
 server ${SERVER_SUBNET} ${SERVER_NETMASK}
-ifconfig-pool-persist ${config_dir}/ipp.txt
+ifconfig-pool-persist ${data_dir}/ipp.txt
 
 # Push routes to clients
 EOF
@@ -85,21 +95,42 @@ cipher ${CIPHER}
 auth ${AUTH}
 tls-version-min 1.2
 
-# Logging - output to stdout so we can see errors
-status ${config_dir}/openvpn-status.log
+# Logging
+status ${data_dir}/openvpn-status.log
 verb ${LOG_LEVEL}
 
 # Client config directory
-client-config-dir ${config_dir}/ccd
+client-config-dir ${data_dir}/ccd
 
 # Explicit exit notify for UDP
 explicit-exit-notify 1
 EOF
 
 # Create client config directory
-mkdir -p "${config_dir}/ccd"
+mkdir -p "${data_dir}/ccd"
 
-# Enable IP forwarding - Use sysctl instead of direct write
+# Create user README in /share
+cat > "${share_dir}/README.txt" <<'READMEEOF'
+OpenVPN Server - Download Your Clients Here
+============================================
+
+1. Client configuration files (.ovpn) are in the "clients" folder
+2. Download via File Editor or Samba share
+3. Before using, edit the .ovpn file:
+   - Change "YOUR_PUBLIC_IP_OR_DDNS" to your actual address
+   
+To create new clients:
+- Open OpenVPN Server add-on
+- Click "Terminal" tab (once add-on is running)
+- Run: openvpn-client-add clientname
+
+Access methods:
+- File Editor: Browse to /share/openvpn/clients/
+- Samba: \\homeassistant\share\openvpn\clients\
+- SSH: /usr/share/hassio/share/openvpn/clients/
+READMEEOF
+
+# Enable IP forwarding
 bashio::log.info "Enabling IP forwarding..."
 sysctl -w net.ipv4.ip_forward=1 >/dev/null 2>&1 || \
     bashio::log.warning "Could not enable IP forwarding (may already be enabled)"
@@ -110,7 +141,9 @@ iptables -t nat -A POSTROUTING -s ${SERVER_SUBNET}/24 -o eth0 -j MASQUERADE 2>&1
 iptables -A FORWARD -i tun0 -j ACCEPT 2>&1 || true
 iptables -A FORWARD -o tun0 -j ACCEPT 2>&1 || true
 
-bashio::log.info "OpenVPN configuration complete. Starting OpenVPN..."
+bashio::log.info "PKI secure in: /data/openvpn/pki/"
+bashio::log.info "Download clients from: /share/openvpn/clients/"
+bashio::log.info "Starting OpenVPN..."
 
-# Start OpenVPN - removed exec to capture output, redirect errors to stdout
+# Start OpenVPN
 openvpn --config "${server_conf}" 2>&1

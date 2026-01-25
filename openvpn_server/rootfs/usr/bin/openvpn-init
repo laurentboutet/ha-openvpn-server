@@ -1,64 +1,48 @@
 #!/usr/bin/with-contenv bashio
 # shellcheck shell=bash
-# ==============================================================================
-# Home Assistant Add-on: OpenVPN Server
-# Initialize PKI infrastructure
-# ==============================================================================
 
-declare config_dir="/data/openvpn"
-declare pki_dir="${config_dir}/pki"
-declare easyrsa_dir="${config_dir}/easy-rsa"
+# PKI stored securely in /data
+declare data_dir="/data/openvpn"
+declare pki_dir="${data_dir}/pki"
+declare easyrsa_dir="${data_dir}/easy-rsa"
 
-bashio::log.info "Initializing OpenVPN PKI..."
+bashio::log.info "Initializing PKI (secure in /data)..."
 
-# Create directories
-mkdir -p "${config_dir}"
+mkdir -p "${data_dir}"
 mkdir -p "${easyrsa_dir}"
 
-# Copy EasyRSA
 cp -r /usr/share/easy-rsa/* "${easyrsa_dir}/"
-cd "${easyrsa_dir}" || bashio::exit.nok "Cannot access EasyRSA directory"
+cd "${easyrsa_dir}" || bashio::exit.nok "Cannot access EasyRSA"
 
-# Initialize PKI
 bashio::log.info "Creating PKI structure..."
-EASYRSA_PKI="${pki_dir}" ./easyrsa init-pki
+EASYRSA_PKI="${pki_dir}" ./easyrsa init-pki || exit 1
 
-# Create CA
-bashio::log.info "Generating Certificate Authority..."
+bashio::log.info "Generating CA..."
 EASYRSA_PKI="${pki_dir}" \
 EASYRSA_BATCH=1 \
 EASYRSA_REQ_CN="HomeAssistant-OpenVPN-CA" \
-./easyrsa build-ca nopass
+./easyrsa build-ca nopass || exit 1
 
-# Generate server certificate
 bashio::log.info "Generating server certificate..."
 EASYRSA_PKI="${pki_dir}" \
 EASYRSA_BATCH=1 \
 EASYRSA_REQ_CN="server" \
-./easyrsa build-server-full server nopass
+./easyrsa build-server-full server nopass || exit 1
 
-# Generate DH parameters
-bashio::log.info "Generating Diffie-Hellman parameters (this may take a while)..."
-EASYRSA_PKI="${pki_dir}" ./easyrsa gen-dh
+bashio::log.info "Generating DH parameters (1-2 minutes)..."
+EASYRSA_PKI="${pki_dir}" ./easyrsa gen-dh || exit 1
 
-# Generate TLS-auth key
-bashio::log.info "Generating TLS authentication key..."
-openvpn --genkey secret "${pki_dir}/ta.key"
+bashio::log.info "Generating TLS auth key..."
+openvpn --genkey secret "${pki_dir}/ta.key" || exit 1
 
-# Generate CRL
-bashio::log.info "Generating Certificate Revocation List..."
-EASYRSA_PKI="${pki_dir}" ./easyrsa gen-crl
+bashio::log.info "Generating CRL..."
+EASYRSA_PKI="${pki_dir}" ./easyrsa gen-crl || exit 1
 
-# Set permissions
-chmod 600 "${pki_dir}/private/"*
-chmod 644 "${pki_dir}/issued/"*
-chmod 644 "${pki_dir}/ca.crt"
-chmod 644 "${pki_dir}/dh.pem"
-chmod 600 "${pki_dir}/ta.key"
+chmod 600 "${pki_dir}/private/"* 2>/dev/null
+chmod 644 "${pki_dir}/issued/"* 2>/dev/null
+chmod 644 "${pki_dir}/ca.crt" 2>/dev/null
+chmod 644 "${pki_dir}/dh.pem" 2>/dev/null
+chmod 600 "${pki_dir}/ta.key" 2>/dev/null
 
-bashio::log.info "PKI initialization complete!"
-bashio::log.info "CA certificate: ${pki_dir}/ca.crt"
-bashio::log.info "Server certificate: ${pki_dir}/issued/server.crt"
-bashio::log.info "Server key: ${pki_dir}/private/server.key"
-
+bashio::log.info "✓ PKI initialized successfully"
 exit 0

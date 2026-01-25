@@ -5,9 +5,10 @@
 # Revoke an OpenVPN client certificate
 # ==============================================================================
 
-declare config_dir="/data/openvpn"
-declare pki_dir="${config_dir}/pki"
-declare easyrsa_dir="${config_dir}/easy-rsa"
+declare data_dir="/data/openvpn"
+declare pki_dir="${data_dir}/pki"
+declare easyrsa_dir="${data_dir}/easy-rsa"
+declare clients_dir="/share/openvpn/clients"
 declare client_name="${1}"
 
 if [[ -z "${client_name}" ]]; then
@@ -34,19 +35,19 @@ EASYRSA_BATCH=1 \
 bashio::log.info "Regenerating Certificate Revocation List..."
 EASYRSA_PKI="${pki_dir}" ./easyrsa gen-crl
 
-# Update server config to use CRL
-declare server_conf="${config_dir}/server.conf"
+# Update server config to use CRL if not already present
+declare server_conf="${data_dir}/server.conf"
 if ! grep -q "crl-verify" "${server_conf}"; then
     echo "crl-verify ${pki_dir}/crl.pem" >> "${server_conf}"
 fi
 
 bashio::log.info "✓ Client '${client_name}' certificate revoked!"
-bashio::log.info "✓ Restart the add-on for changes to take effect"
+bashio::log.warning "⚠ Restart the add-on for changes to take effect"
 
-# Remove client config file
-if [[ -f "/share/${client_name}.ovpn" ]]; then
-    rm "/share/${client_name}.ovpn"
-    bashio::log.info "✓ Client configuration file removed from /share/"
+# Remove client config file from download folder
+if [[ -f "${clients_dir}/${client_name}.ovpn" ]]; then
+    rm "${clients_dir}/${client_name}.ovpn"
+    bashio::log.info "✓ Client file removed from /share/openvpn/clients/"
 fi
 
 exit 0
