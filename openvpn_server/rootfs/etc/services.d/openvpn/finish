@@ -1,19 +1,32 @@
 #!/usr/bin/with-contenv bashio
 # shellcheck shell=bash
-# ==============================================================================
-# Home Assistant Add-on: OpenVPN Server
-# Take down the S6 supervision tree when OpenVPN fails
-# ==============================================================================
-
-declare exit_code
-readonly exit_code_container="${1}"
+declare exit_code_container="${1}"
 
 bashio::log.info "OpenVPN server stopped with exit code ${exit_code_container}"
 
+# Copy logs to /share for debugging on error
 if [[ "${exit_code_container}" -ne 0 ]] && [[ "${exit_code_container}" -ne 256 ]]; then
-  bashio::log.warning "Halt add-on with exit code ${exit_code_container}"
-  echo "${exit_code_container}" > /run/s6-linux-init-container-results/exitcode
-  exec /run/s6/basedir/bin/halt
+    bashio::log.warning "Error detected. Copying debug info to /share/openvpn/..."
+    
+    # Copy logs if they exist
+    if [[ -f /data/openvpn/openvpn.log ]]; then
+        cp /data/openvpn/openvpn.log /share/openvpn/openvpn-error.log 2>/dev/null
+        bashio::log.info "✓ Log copied to /share/openvpn/openvpn-error.log"
+    fi
+    
+    # Copy server config for debugging
+    if [[ -f /data/openvpn/server.conf ]]; then
+        cp /data/openvpn/server.conf /share/openvpn/server.conf.debug 2>/dev/null
+        bashio::log.info "✓ Config copied to /share/openvpn/server.conf.debug"
+    fi
+    
+    # List PKI structure
+    ls -laR /data/openvpn/pki/ > /share/openvpn/pki-debug.txt 2>&1 || true
+    bashio::log.info "✓ PKI structure saved to /share/openvpn/pki-debug.txt"
+    
+    bashio::log.warning "Halt add-on"
+    echo "${exit_code_container}" > /run/s6-linux-init-container-results/exitcode
+    exec /run/s6/basedir/bin/halt
 fi
 
-bashio::log.info "Service restart after closing"
+bashio::log.info "Service restart after clean shutdown"
