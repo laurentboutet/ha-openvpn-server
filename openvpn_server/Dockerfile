@@ -1,4 +1,4 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base:15.0.1
+ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 # Set shell
@@ -7,14 +7,14 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Setup base system
 RUN \
     apk add --no-cache \
-        openvpn=2.6.8-r0 \
-        easy-rsa=3.1.7-r0 \
-        bash=5.2.21-r0 \
-        iptables=1.8.10-r3 \
-        ip6tables=1.8.10-r3 \
-        tzdata=2024a-r0 \
-        openssl=3.1.4-r6 \
-        jq=1.7.1-r0 \
+        openvpn \
+        easy-rsa \
+        bash \
+        iptables \
+        ip6tables \
+        tzdata \
+        openssl \
+        jq \
     && rm -rf /tmp/* /var/cache/apk/*
 
 # Copy root filesystem
