@@ -1,6 +1,6 @@
 name: "OpenVPN Server"
 description: "Full-featured OpenVPN server with PKI management for secure remote access"
-version: "1.0.0"
+version: "1.0.1"
 slug: openvpn_server
 url: "https://github.com/laurentboutet/ha-openvpn-server"
 arch:
@@ -48,4 +48,4 @@ schema:
   log_level: "int(0,9)?"
   cipher: "list(AES-256-GCM|AES-128-GCM|AES-256-CBC)?"
   auth: "list(SHA256|SHA384|SHA512)?"
-image: "ghcr.io/{arch}-addon-openvpn-server"
+
