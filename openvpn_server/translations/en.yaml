@@ -35,3 +35,7 @@ configuration:
   auth:
     name: Authentication
     description: HMAC authentication algorithm
+  create_client_name:
+    name: Client Name
+    description: 'Enter client name (letters, numbers, hyphens, underscores only). Example: myphone, laptop, tablet. \
+    IMPORTANT: leave blank after client is created to avoid creating the client again!'
