@@ -191,27 +191,128 @@ bashio::log.info "✓ VPN subnet: ${SERVER_SUBNET}/${SERVER_NETMASK}"
 bashio::log.info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 bashio::log.info "Starting OpenVPN daemon..."
 
-# Check if client creation requested (non-empty name)
-CREATE_CLIENT=$(bashio::config 'create_client_name')
-if [[ -n "${CREATE_CLIENT}" ]]; then
-    # Only create if doesn't exist
-    if [[ ! -f "${pki_dir}/issued/${CREATE_CLIENT}.crt" ]]; then
-        bashio::log.info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        bashio::log.info "📱 Creating VPN client: ${CREATE_CLIENT}"
-        
-        /usr/bin/openvpn-client-add "${CREATE_CLIENT}"
-        
-        bashio::log.notice "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        bashio::log.notice "✅ Client '${CREATE_CLIENT}' created!"
-        bashio::log.notice "📁 /share/openvpn/clients/${CREATE_CLIENT}.ovpn"
-        bashio::log.notice ""
-        bashio::log.notice "⚠️  Clear 'Create Client Name' field and Save"
-        bashio::log.notice "   to avoid recreating on next restart"
-        bashio::log.notice "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    else
-        bashio::log.warning "⚠️  Client '${CREATE_CLIENT}' already exists"
-        bashio::log.warning "📁 /share/openvpn/clients/${CREATE_CLIENT}.ovpn"
-    fi
+# ============================================================================
+# CLIENT MANAGEMENT
+# ============================================================================
+CLIENT_NAME=$(bashio::config 'client_name')
+CLIENT_ACTION=$(bashio::config 'client_action')
+
+if [[ "${CLIENT_ACTION}" != "none" ]]; then
+    bashio::log.info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    bashio::log.info "📱 Client Management Action: ${CLIENT_ACTION}"
+    
+    case "${CLIENT_ACTION}" in
+        create)
+            if [[ -z "${CLIENT_NAME}" ]]; then
+                bashio::log.error "❌ Client name is required for create action"
+            elif [[ -f "${pki_dir}/issued/${CLIENT_NAME}.crt" ]]; then
+                bashio::log.warning "⚠️  Client '${CLIENT_NAME}' already exists"
+                bashio::log.warning "📁 Download: /share/openvpn/clients/${CLIENT_NAME}.ovpn"
+                bashio::log.warning ""
+                bashio::log.warning "💡 Use 'recreate' action to regenerate .ovpn file"
+                bashio::log.warning "   or choose different name"
+            else
+                bashio::log.info "Creating new client: ${CLIENT_NAME}"
+                /usr/bin/openvpn-client-add "${CLIENT_NAME}"
+                
+                bashio::log.notice "✅ Client '${CLIENT_NAME}' created successfully!"
+                bashio::log.notice "📁 Download: /share/openvpn/clients/${CLIENT_NAME}.ovpn"
+            fi
+            ;;
+            
+        recreate)
+            if [[ -z "${CLIENT_NAME}" ]]; then
+                bashio::log.error "❌ Client name is required for recreate action"
+            elif [[ ! -f "${pki_dir}/issued/${CLIENT_NAME}.crt" ]]; then
+                bashio::log.error "❌ Client '${CLIENT_NAME}' doesn't exist"
+                bashio::log.error "💡 Use 'create' action instead"
+            else
+                bashio::log.info "Regenerating .ovpn file for: ${CLIENT_NAME}"
+                
+                # Delete old .ovpn file
+                rm -f "${clients_dir}/${CLIENT_NAME}.ovpn"
+                
+                # Regenerate using openvpn-client-add (will skip cert generation)
+                /usr/bin/openvpn-client-add "${CLIENT_NAME}" 2>/dev/null || {
+                    # If fails, manually regenerate .ovpn
+                    bashio::log.info "Manually regenerating .ovpn file..."
+                    
+                    PROTO=$(bashio::config 'proto')
+                    PORT=$(bashio::config 'port')
+                    CIPHER=$(bashio::config 'cipher')
+                    AUTH=$(bashio::config 'auth')
+                    
+                    cat > "${clients_dir}/${CLIENT_NAME}.ovpn" <<EOF
+# OpenVPN Client: ${CLIENT_NAME}
+# Regenerated: $(date)
+
+client
+dev tun
+proto ${PROTO}
+remote YOUR_PUBLIC_IP_OR_DDNS ${PORT}
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+remote-cert-tls server
+cipher ${CIPHER}
+auth ${AUTH}
+verb 3
+key-direction 1
+
+<ca>
+$(cat "${pki_dir}/ca.crt")
+</ca>
+
+<cert>
+$(openssl x509 -in "${pki_dir}/issued/${CLIENT_NAME}.crt")
+</cert>
+
+<key>
+$(cat "${pki_dir}/private/${CLIENT_NAME}.key")
+</key>
+
+<tls-auth>
+$(cat "${pki_dir}/ta.key")
+</tls-auth>
+EOF
+                    chmod 600 "${clients_dir}/${CLIENT_NAME}.ovpn"
+                }
+                
+                bashio::log.notice "✅ File regenerated: /share/openvpn/clients/${CLIENT_NAME}.ovpn"
+            fi
+            ;;
+            
+        revoke)
+            if [[ -z "${CLIENT_NAME}" ]]; then
+                bashio::log.error "❌ Client name is required for revoke action"
+            elif [[ ! -f "${pki_dir}/issued/${CLIENT_NAME}.crt" ]]; then
+                bashio::log.error "❌ Client '${CLIENT_NAME}' doesn't exist"
+            else
+                bashio::log.warning "🔒 Revoking client: ${CLIENT_NAME}"
+                /usr/bin/openvpn-client-revoke "${CLIENT_NAME}"
+                
+                bashio::log.notice "✅ Client '${CLIENT_NAME}' revoked"
+                bashio::log.notice "⚠️  Restart add-on for revocation to take effect"
+            fi
+            ;;
+            
+        list)
+            bashio::log.info "📋 Listing all VPN clients..."
+            /usr/bin/openvpn-client-list
+            ;;
+            
+        *)
+            bashio::log.error "❌ Unknown action: ${CLIENT_ACTION}"
+            ;;
+    esac
+    
+    bashio::log.info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    bashio::log.notice ""
+    bashio::log.notice "⚠️  IMPORTANT: Set 'Client Action' back to 'none' and Save"
+    bashio::log.notice "   to prevent action from repeating on restart"
+    bashio::log.notice ""
+    bashio::log.info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 fi
 
 # Start OpenVPN - redirect stderr to stdout to capture errors

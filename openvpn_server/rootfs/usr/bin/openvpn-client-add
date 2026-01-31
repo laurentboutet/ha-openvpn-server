@@ -20,17 +20,18 @@ fi
 
 cd "${easyrsa_dir}" || exit 1
 
-if [[ -f "${pki_dir}/issued/${client_name}.crt" ]]; then
-    bashio::log.error "Client '${client_name}' already exists"
-    exit 1
+# Generate certificate only if doesn't exist
+if [[ ! -f "${pki_dir}/issued/${client_name}.crt" ]]; then
+    bashio::log.info "Generating certificate for: ${client_name}"
+    
+    EASYRSA_PKI="${pki_dir}" \
+    EASYRSA_BATCH=1 \
+    ./easyrsa build-client-full "${client_name}" nopass || exit 1
+else
+    bashio::log.info "Certificate exists, regenerating .ovpn file only"
 fi
 
-bashio::log.info "Generating certificate for: ${client_name}"
-
-EASYRSA_PKI="${pki_dir}" \
-EASYRSA_BATCH=1 \
-./easyrsa build-client-full "${client_name}" nopass || exit 1
-
+# Always generate/regenerate .ovpn file
 PROTO=$(bashio::config 'proto')
 PORT=$(bashio::config 'port')
 CIPHER=$(bashio::config 'cipher')

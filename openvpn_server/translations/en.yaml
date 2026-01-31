@@ -35,7 +35,16 @@ configuration:
   auth:
     name: Authentication
     description: HMAC authentication algorithm
-  create_client_name:
-    name: Client Name
-    description: 'Enter client name (letters, numbers, hyphens, underscores only). Example: myphone, laptop, tablet. \
-    IMPORTANT: leave blank after client is created to avoid creating the client again!'
+  client_name:
+    name: "Client Name"
+    description: Enter client name (e.g., myphone, laptop, tablet). Use letters, numbers, hyphens, underscores only.
+    name: "Client Action"
+    description: |
+      Select action to perform on save:
+      - none: Do nothing (default)
+      - create: Create new client (only if doesn't exist)
+      - recreate: Regenerate .ovpn file (even if exists)
+      - revoke: Revoke client certificate
+      - list: List all clients in logs
+      
+      IMPORTANT: Set back to 'none' after action completes!

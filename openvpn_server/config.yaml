@@ -1,6 +1,6 @@
 name: "OpenVPN Server"
 description: "Full-featured OpenVPN server with PKI management for secure remote access"
-version: "1.0.12"
+version: "1.0.13"
 slug: openvpn_server
 url: "https://github.com/laurentboutet/ha-openvpn-server"
 arch:
@@ -47,7 +47,8 @@ options:
   cipher: "AES-256-GCM"
   auth: "SHA256"
   # NEW CLIENT MANAGEMENT
-  create_client_name: ""
+  client_name: ""
+  client_action: "none"
 schema:
   proto: "list(udp|tcp)?"
   port: "port?"
@@ -63,4 +64,6 @@ schema:
   log_level: "int(0,9)?"
   cipher: "list(AES-256-GCM|AES-128-GCM|AES-256-CBC)?"
   auth: "list(SHA256|SHA384|SHA512)?"
-  create_client_name: "str?"
+  # CLIENT MANAGEMENT SCHEMA
+  client_name: "str?"
+  client_action: "list(none|create|recreate|revoke|list)?"
