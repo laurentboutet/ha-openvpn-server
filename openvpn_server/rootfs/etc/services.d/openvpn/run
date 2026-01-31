@@ -191,13 +191,27 @@ bashio::log.info "✓ VPN subnet: ${SERVER_SUBNET}/${SERVER_NETMASK}"
 bashio::log.info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 bashio::log.info "Starting OpenVPN daemon..."
 
-# Check if client creation requested
-if bashio::config.true 'create_client_button' && [[ -n "$(bashio::config 'client_name')" ]]; then
-    bashio::log.info "Client creation requested via config: $(bashio::config 'client_name')"
-    /usr/bin/openvpn-client-add "$(bashio::config 'client_name')"
-    bashio::log.info "Client creation completed. Restart add-on to use normally."
-    # Don't start OpenVPN - let user restart after config change
-    bashio::exit.ok "Client created successfully"
+# Check if client creation requested (non-empty name)
+CREATE_CLIENT=$(bashio::config 'create_client_name')
+if [[ -n "${CREATE_CLIENT}" ]]; then
+    # Only create if doesn't exist
+    if [[ ! -f "${pki_dir}/issued/${CREATE_CLIENT}.crt" ]]; then
+        bashio::log.info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        bashio::log.info "📱 Creating VPN client: ${CREATE_CLIENT}"
+        
+        /usr/bin/openvpn-client-add "${CREATE_CLIENT}"
+        
+        bashio::log.notice "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        bashio::log.notice "✅ Client '${CREATE_CLIENT}' created!"
+        bashio::log.notice "📁 /share/openvpn/clients/${CREATE_CLIENT}.ovpn"
+        bashio::log.notice ""
+        bashio::log.notice "⚠️  Clear 'Create Client Name' field and Save"
+        bashio::log.notice "   to avoid recreating on next restart"
+        bashio::log.notice "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    else
+        bashio::log.warning "⚠️  Client '${CREATE_CLIENT}' already exists"
+        bashio::log.warning "📁 /share/openvpn/clients/${CREATE_CLIENT}.ovpn"
+    fi
 fi
 
 # Start OpenVPN - redirect stderr to stdout to capture errors
