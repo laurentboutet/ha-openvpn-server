@@ -191,5 +191,14 @@ bashio::log.info "✓ VPN subnet: ${SERVER_SUBNET}/${SERVER_NETMASK}"
 bashio::log.info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 bashio::log.info "Starting OpenVPN daemon..."
 
+# Check if client creation requested
+if bashio::config.true 'create_client_button' && [[ -n "$(bashio::config 'client_name')" ]]; then
+    bashio::log.info "Client creation requested via config: $(bashio::config 'client_name')"
+    /usr/bin/openvpn-client-add "$(bashio::config 'client_name')"
+    bashio::log.info "Client creation completed. Restart add-on to use normally."
+    # Don't start OpenVPN - let user restart after config change
+    bashio::exit.ok "Client created successfully"
+fi
+
 # Start OpenVPN - redirect stderr to stdout to capture errors
 openvpn --config "${server_conf}" 2>&1
