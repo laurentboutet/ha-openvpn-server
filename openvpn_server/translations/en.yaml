@@ -37,7 +37,8 @@ configuration:
     description: HMAC authentication algorithm
   client_name:
     name: "Client Name"
-    description: Enter client name (e.g., myphone, laptop, tablet). Use letters, numbers, hyphens, underscores only.
+    description: "Enter client name (e.g., myphone, laptop, tablet). Use letters, numbers, hyphens, underscores only."
+  client_action:
     name: "Client Action"
     description: |
       Select action to perform on save:
