@@ -1,3 +1,0 @@
-#!/usr/bin/with-contenv bashio
-# shellcheck shell=bash
-exec /usr/bin/health-server

@@ -1,0 +1,236 @@
+# ============================================================================
+# OpenVPN Server Integration - Monitoring & Control
+# ============================================================================
+# Version: 1.0.12
+# Compatible: Home Assistant 2026.1+
+# Last Updated: February 2026
+# ============================================================================
+
+# ============================================================================
+# IMPORTANT: Find Your Add-on Slug First!
+# ============================================================================
+# The slug below is an EXAMPLE - yours will be DIFFERENT!
+#
+# To find YOUR slug:
+# 1. Go to: Settings → Add-ons → OpenVPN Server
+# 2. Look at browser URL bar
+# 3. URL will be: /hassio/addon/YOUR_SLUG_HERE/info
+# 4. Copy YOUR_SLUG_HERE and replace 'local_openvpn_server' below
+#
+# Alternative method:
+# 1. Settings → Add-ons → OpenVPN Server → Info tab
+# 2. Check add-on details for slug/ID
+#
+# Then replace ALL occurrences of 'local_openvpn_server' in this file
+# ============================================================================
+
+# Shell Commands for Server Control
+# ----------------------------------
+shell_command:
+  # Restart OpenVPN server
+  openvpn_restart_server: 'ha addons restart local_openvpn_server'
+
+# Input Boolean for Notification Control
+# ---------------------------------------
+input_boolean:
+  openvpn_notifications:
+    name: "OpenVPN Connection Alerts"
+    icon: mdi:bell-ring
+    initial: true
+
+# Template Sensors - Modern Syntax (2026+)
+# -----------------------------------------
+template:
+  - sensor:
+      # Main status sensor with client count
+      - name: "OpenVPN Server Status"
+        unique_id: openvpn_server_status
+        icon: >
+          {% if states('sensor.openvpn_connected_clients') not in ['unavailable', 'unknown'] %}
+            mdi:shield-check
+          {% else %}
+            mdi:shield-off
+          {% endif %}
+        state: >
+          {% set clients = states('sensor.openvpn_connected_clients') %}
+          {% if clients not in ['unavailable', 'unknown'] %}
+            {% set count = clients | int(0) %}
+            {% if count == 0 %}
+              Running (no clients)
+            {% elif count == 1 %}
+              Running (1 client)
+            {% else %}
+              Running ({{ count }} clients)
+            {% endif %}
+          {% else %}
+            Offline
+          {% endif %}
+        attributes:
+          client_count: >
+            {{ states('sensor.openvpn_connected_clients') | int(0) }}
+          uptime: >
+            {{ relative_time(states.sensor.openvpn_connected_clients.last_changed) }}
+          last_updated: >
+            {{ as_timestamp(states.sensor.openvpn_connected_clients.last_changed) | timestamp_custom('%Y-%m-%d %H:%M:%S') }}
+
+  - binary_sensor:
+      # Binary sensor for easier automations
+      - name: "OpenVPN Server Online"
+        unique_id: openvpn_server_online
+        device_class: connectivity
+        icon: >
+          {% if this.state == 'on' %}
+            mdi:vpn
+          {% else %}
+            mdi:vpn-off
+          {% endif %}
+        state: >
+          {{ states('sensor.openvpn_connected_clients') not in ['unavailable', 'unknown'] }}
+
+# Scripts for Dashboard Actions
+# ------------------------------
+script:
+  openvpn_restart_server:
+    alias: "Restart OpenVPN Server"
+    icon: mdi:restart
+    mode: single
+    sequence:
+      - service: shell_command.openvpn_restart_server
+      - service: persistent_notification.create
+        data:
+          title: "🔄 OpenVPN Server Restarting"
+          message: >
+            Server restart initiated. Please wait 10-15 seconds for service to come back online.
+
+            Check: Settings → Add-ons → OpenVPN Server → Logs
+      - delay: "00:00:10"
+
+  openvpn_open_addon_page:
+    alias: "Open OpenVPN Add-on Page"
+    icon: mdi:open-in-app
+    mode: single
+    sequence:
+      - service: persistent_notification.create
+        data:
+          title: "📋 OpenVPN Add-on"
+          message: >
+            **Client Management:**
+            Settings → Add-ons → OpenVPN Server → Configuration
+
+            **View Connected Clients:**
+            Settings → Add-ons → OpenVPN Server → Logs
+
+            **Actions Available:**
+            - Create new client certificates
+            - Recreate lost .ovpn files
+            - Revoke client access
+            - List all clients
+
+# Automations for Connection Monitoring
+# --------------------------------------
+automation:
+  # Alert when client connects
+  - id: openvpn_client_connected_alert
+    alias: "OpenVPN - Client Connected"
+    description: "Notify when a VPN client connects"
+    mode: queued
+    trigger:
+      - platform: state
+        entity_id: sensor.openvpn_connected_clients
+    condition:
+      - condition: template
+        value_template: >
+          {{ trigger.to_state.state not in ['unavailable', 'unknown'] and
+             trigger.from_state.state not in ['unavailable', 'unknown'] and
+             trigger.to_state.state | int(0) > trigger.from_state.state | int(0) }}
+      - condition: state
+        entity_id: input_boolean.openvpn_notifications
+        state: "on"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "🔒 VPN Client Connected"
+          message: >
+            **Status:** {{ states('sensor.openvpn_connected_clients') }} client(s) now connected
+
+            **Time:** {{ now().strftime('%H:%M:%S') }}
+
+            {% if trigger.to_state.attributes.clients %}
+            **Clients:** {{ trigger.to_state.attributes.clients }}
+            {% endif %}
+
+  # Alert when client disconnects
+  - id: openvpn_client_disconnected_alert
+    alias: "OpenVPN - Client Disconnected"
+    description: "Notify when a VPN client disconnects"
+    mode: queued
+    trigger:
+      - platform: state
+        entity_id: sensor.openvpn_connected_clients
+    condition:
+      - condition: template
+        value_template: >
+          {{ trigger.to_state.state not in ['unavailable', 'unknown'] and
+             trigger.from_state.state not in ['unavailable', 'unknown'] and
+             trigger.to_state.state | int(0) < trigger.from_state.state | int(0) }}
+      - condition: state
+        entity_id: input_boolean.openvpn_notifications
+        state: "on"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "🔓 VPN Client Disconnected"
+          message: >
+            **Status:** {{ states('sensor.openvpn_connected_clients') }} client(s) now connected
+
+            **Time:** {{ now().strftime('%H:%M:%S') }}
+
+            **Previous:** {{ trigger.from_state.state }} clients
+
+  # Alert when server goes offline
+  - id: openvpn_server_offline_alert
+    alias: "OpenVPN - Server Offline"
+    description: "Alert when OpenVPN server stops"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.openvpn_server_online
+        to: "off"
+        for: "00:00:30"
+    condition:
+      - condition: state
+        entity_id: input_boolean.openvpn_notifications
+        state: "on"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "⚠️ OpenVPN Server Offline"
+          message: >
+            OpenVPN server has stopped responding.
+
+            **Check:** Settings → Add-ons → OpenVPN Server → Logs
+
+            **Action:** Use dashboard restart button or manually restart add-on
+
+  # Alert when server comes online
+  - id: openvpn_server_online_alert
+    alias: "OpenVPN - Server Online"
+    description: "Confirm when OpenVPN server starts"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.openvpn_server_online
+        to: "on"
+        for: "00:00:05"
+    condition:
+      - condition: state
+        entity_id: input_boolean.openvpn_notifications
+        state: "on"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "✅ OpenVPN Server Online"
+          message: >
+            OpenVPN server is now running and accepting connections.
+
+            **Status:** {{ states('sensor.openvpn_server_status') }}
