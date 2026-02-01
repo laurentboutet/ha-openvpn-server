@@ -1,0 +1,4 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck shell=bash
+sleep 15
+exec /usr/bin/openvpn-sensor-update

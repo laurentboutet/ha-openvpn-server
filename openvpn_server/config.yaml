@@ -1,6 +1,6 @@
 name: "OpenVPN Server"
 description: "Full-featured OpenVPN server with PKI management for secure remote access"
-version: "1.0.15"
+version: "1.0.16"
 slug: openvpn_server
 url: "https://github.com/laurentboutet/ha-openvpn-server"
 arch:
