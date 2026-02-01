@@ -15,14 +15,15 @@ RUN \
         tzdata \
         openssl \
         jq \
+        curl \        
     && rm -rf /tmp/* /var/cache/apk/*
 
 # Copy root filesystem
 COPY rootfs /
 
 # Set permissions
-RUN chmod a+x /etc/services.d/openvpn/run \
-    && chmod a+x /etc/services.d/openvpn/finish \
+RUN chmod a+x /etc/services.d/*/run \
+    && chmod a+x /etc/services.d/*/finish \
     && chmod a+x /usr/bin/openvpn-* \
     && mkdir -p /data/openvpn
 
